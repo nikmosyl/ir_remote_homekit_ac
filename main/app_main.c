@@ -41,8 +41,6 @@
 #include <app_wifi.h>
 #include <app_hap_setup_payload.h>
 
-#include "lightbulb.h"
-
 #include "Libs/ac_command/ac_command.h"
 #include "Libs/ir_transceiver/ir_transceiver.h"
 
