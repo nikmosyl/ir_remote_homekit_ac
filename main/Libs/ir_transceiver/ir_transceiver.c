@@ -4,18 +4,19 @@
 
 #include "driver/rmt.h"
 #include "esp_log.h"
-#include <string.h>
 #include "Libs/ac_command/ac_command.h"
+#include "Libs/internal_led/internal_led.h"
+
+#define IR_PIN 26
+#define LED_BLUE 23
 
 static const char* LOG_TAG = "TEST_LOG";
 
 const rmt_channel_t RMT_CHANNEL = RMT_CHANNEL_0;
-const gpio_num_t IR_PIN = GPIO_NUM_26;
 const int RMT_TX_CARRIER_EN = 1;
 
 void setup_rmt_config()
 {
-    //put your setup code here, to run once:
     rmt_config_t rmtConfig;
 
     rmtConfig.rmt_mode = RMT_MODE_TX;  								//transmit mode
@@ -38,7 +39,8 @@ void setup_rmt_config()
 
 static void rmtAcCtrlTask()
 {
-    vTaskDelay(10);
+    internal_led_on(LED_BLUE);
+
     setup_rmt_config();
     esp_log_level_set(LOG_TAG, ESP_LOG_INFO);
 
@@ -47,21 +49,26 @@ static void rmtAcCtrlTask()
 
     const int send_data_length = (data_length + 2)/2;
 
-    rmt_item32_t send_data[send_data_length]; 		//Data to send the AC
+    rmt_item32_t send_data[send_data_length]; 		//Data to send
 
     for(int i = 0, t = 0; i < (send_data_length*2)-1; i += 2, t++)
     {
         //Odd bit High
-        send_data[t].duration0 = data[i];           //The patern is odd bits to High on IR LED and even bits to Low
-        send_data[t].level0 = 1;					//looking at the powerOn and Off array index. So this is mapped on
-        //Even bit Low		//data for every index
+        send_data[t].duration0 = data[i];
+        send_data[t].level0 = 1;
+        //Even bit Low
         send_data[t].duration1 = data[i+1];
         send_data[t].level1 = 0;
     }
 
     ESP_LOGI(LOG_TAG, "SEND RMT DATA");
 
-    rmt_write_items(RMT_CHANNEL, send_data, send_data_length, false);
+    rmt_write_items(RMT_CHANNEL, send_data, send_data_length, true);
+
+    //some circuit design corrections using software, since RMT does not care about the state of the IR pin, you have to install it manually
+    gpio_set_level(IR_PIN, 1);
+
+    internal_led_off(LED_BLUE);
 
     vTaskDelete(NULL);
 }

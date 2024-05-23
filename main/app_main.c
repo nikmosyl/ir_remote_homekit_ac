@@ -22,10 +22,7 @@
  *
  */
 
-/* HomeKit Lightbulb Example
-*/
-
-#include <stdio.h>
+//#include <stdio.h>
 #include <string.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -43,15 +40,16 @@
 
 #include "Libs/ac_command/ac_command.h"
 #include "Libs/ir_transceiver/ir_transceiver.h"
+#include "Libs/internal_led/internal_led.h"
 
 /* Comment out the below line to disable Firmware Upgrades */
 #define CONFIG_FIRMWARE_SERVICE
 
-static const char *TAG = "HAP lightbulb";
+static const char *TAG = "HAP thermostat";
 
-#define LIGHTBULB_TASK_PRIORITY  1
-#define LIGHTBULB_TASK_STACKSIZE (4 * 1024)
-#define LIGHTBULB_TASK_NAME      "hap_lightbulb"
+#define THERMOSTAT_TASK_PRIORITY  1
+#define THERMOSTAT_TASK_STACKSIZE (4 * 1024)
+#define THERMOSTAT_TASK_NAME      "hap_thermostat"
 
 /* Reset network credentials if button is pressed for more than 3 seconds and then released */
 #define RESET_NETWORK_BUTTON_TIMEOUT        3
@@ -61,6 +59,8 @@ static const char *TAG = "HAP lightbulb";
 
 /* The button "Boot" will be used as the Reset button for the example */
 #define RESET_GPIO  GPIO_NUM_0
+
+#define LED_ORANGE 18
 /**
  * @brief The network reset button callback handler.
  * Useful for testing the Wi-Fi re-configuration feature of WAC2
@@ -93,16 +93,16 @@ static void reset_key_init(uint32_t key_gpio_pin)
  * In a real accessory, something like LED blink should be implemented
  * got visual identification
  */
-static int light_identify(hap_acc_t *ha)
+static int thermostat_identify(hap_acc_t *ha)
 {
     ESP_LOGI(TAG, "Accessory identified");
     return HAP_SUCCESS;
 }
 
-/* Callback for handling writes on the Light Bulb Service
+/* Callback for handling writes on the Thermostat Service
  */
-static int lightbulb_write(hap_write_data_t write_data[], int count,
-        void *serv_priv, void *write_priv)
+static int thermostat_write(hap_write_data_t write_data[], int count,
+                            void *serv_priv, void *write_priv)
 {
     hap_write_data_t *write;
     int ret = HAP_SUCCESS;
@@ -131,9 +131,11 @@ static int lightbulb_write(hap_write_data_t write_data[], int count,
     return ret;
 }
 
-/*The main thread for handling the Light Bulb Accessory */
-static void lightbulb_thread_entry(void *arg)
+/*The main thread for handling the Thermostat Accessory */
+static void thermostat_thread_entry(void *arg)
 {
+    internal_led_on(LED_ORANGE);
+
     hap_acc_t *accessory;
     hap_serv_t *service;
 
@@ -148,10 +150,10 @@ static void lightbulb_thread_entry(void *arg)
         .manufacturer = "Espressif",
         .model = "EspAir01",
         .serial_num = "202405211633",
-        .fw_rev = "0.9.0",
+        .fw_rev = "1.0.0",
         .hw_rev = "1.0",
         .pv = "1.1.0",
-        .identify_routine = light_identify,
+        .identify_routine = thermostat_identify,
         .cid = HAP_CID_THERMOSTAT,
     };
 
@@ -159,7 +161,7 @@ static void lightbulb_thread_entry(void *arg)
     accessory = hap_acc_create(&cfg);
     if (!accessory) {
         ESP_LOGE(TAG, "Failed to create accessory");
-        goto light_err;
+        goto thermostat_err;
     }
 
     /* Add a dummy Product Data */
@@ -169,27 +171,24 @@ static void lightbulb_thread_entry(void *arg)
     /* Add Wi-Fi Transport service required for HAP Spec R16 */
     hap_acc_add_wifi_transport_service(accessory, 0);
 
-    /* Create the Light Bulb Service. Include the "name" since this is a user visible service  */
+    /* Create the Thermostat Service. Include the "name" since this is a user visible service  */
     service = hap_serv_thermostat_create(0,0,(float)21.0,(float)21.0,0);
     if (!service) {
-        ESP_LOGE(TAG, "Failed to create LightBulb Service");
-        goto light_err;
+        ESP_LOGE(TAG, "Failed to create  Service");
+        goto thermostat_err;
     }
 
-    /* Add the optional characteristic to the Light Bulb Service */
-    int ret = hap_serv_add_char(service, hap_char_name_create("My Light"));
-    //ret |= hap_serv_add_char(service, hap_char_brightness_create(50));
-    //ret |= hap_serv_add_char(service, hap_char_hue_create(180));
-    //ret |= hap_serv_add_char(service, hap_char_saturation_create(100));
+    /* Add the optional characteristic to the Thermostat Service */
+    int ret = hap_serv_add_char(service, hap_char_name_create("My Thermostat"));
     
     if (ret != HAP_SUCCESS) {
-        ESP_LOGE(TAG, "Failed to add optional characteristics to LightBulb");
-        goto light_err;
+        ESP_LOGE(TAG, "Failed to add optional characteristics to Thermostat");
+        goto thermostat_err;
     }
     /* Set the write callback for the service */
-    hap_serv_set_write_cb(service, lightbulb_write);
+    hap_serv_set_write_cb(service, thermostat_write);
     
-    /* Add the Light Bulb Service to the Accessory Object */
+    /* Add the Thermostat Service to the Accessory Object */
     hap_acc_add_serv(accessory, service);
 
 #ifdef CONFIG_FIRMWARE_SERVICE
@@ -205,7 +204,7 @@ static void lightbulb_thread_entry(void *arg)
     service = hap_serv_fw_upgrade_create(&ota_config);
     if (!service) {
         ESP_LOGE(TAG, "Failed to create Firmware Upgrade Service");
-        goto light_err;
+        goto thermostat_err;
     }
     hap_acc_add_serv(accessory, service);
 #endif
@@ -213,7 +212,7 @@ static void lightbulb_thread_entry(void *arg)
     /* Add the Accessory to the HomeKit Database */
     hap_add_accessory(accessory);
 
-    /* Initialize the Light Bulb Hardware */
+    /* Initialize the RMT Hardware */
     setup_rmt_config();
 
     /* Register a common button for reset Wi-Fi network and reset to factory.
@@ -256,16 +255,17 @@ static void lightbulb_thread_entry(void *arg)
     /* Start Wi-Fi */
     app_wifi_start(portMAX_DELAY);
 
+    internal_led_off(LED_ORANGE);
     /* The task ends here. The read/write callbacks will be invoked by the HAP Framework */
     vTaskDelete(NULL);
 
-light_err:
+thermostat_err:
     hap_acc_delete(accessory);
     vTaskDelete(NULL);
 }
 
 void app_main()
 {
-    xTaskCreate(lightbulb_thread_entry, LIGHTBULB_TASK_NAME, LIGHTBULB_TASK_STACKSIZE,
-            NULL, LIGHTBULB_TASK_PRIORITY, NULL);
+    xTaskCreate(thermostat_thread_entry, THERMOSTAT_TASK_NAME, THERMOSTAT_TASK_STACKSIZE,
+                NULL, THERMOSTAT_TASK_PRIORITY, NULL);
 }
