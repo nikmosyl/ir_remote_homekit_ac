@@ -1,4 +1,4 @@
-# Xiaomi инфракраснный контроллер с интеграцией HomeKit
+# Универсальный инфракраснный пульт Xiaomi с интеграцией HomeKit
 Прошивка для универсального ИК-пульта дистанционного управления Xiaomi chuangmi.remote.v2 MJYKQ01CM с интеграцией Apple HomeKit
 
 [en](https://github.com/nikmosyl/ir_remote_homekit_ac/blob/main/README.md)
