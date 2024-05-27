@@ -29,8 +29,8 @@ void setup_rmt_config()
     rmtConfig.tx_config.carrier_freq_hz = 38000;  					//38kHz carrier frequency
     rmtConfig.tx_config.carrier_duty_percent = 33; 					//duty
     rmtConfig.tx_config.carrier_level =  RMT_CARRIER_LEVEL_HIGH; 	//carrier level
-    rmtConfig.tx_config.carrier_en =RMT_TX_CARRIER_EN ;  			//carrier enable
-    rmtConfig.tx_config.idle_level =  RMT_IDLE_LEVEL_LOW ; 			//signal level at idle
+    rmtConfig.tx_config.carrier_en = RMT_TX_CARRIER_EN ;  			//carrier enable
+    rmtConfig.tx_config.idle_level = RMT_IDLE_LEVEL_LOW ; 			//signal level at idle
     rmtConfig.tx_config.idle_output_en = true;  					//output if idle
 
     rmt_config(&rmtConfig);
@@ -64,9 +64,6 @@ static void rmtAcCtrlTask()
     ESP_LOGI(LOG_TAG, "SEND RMT DATA");
 
     rmt_write_items(RMT_CHANNEL, send_data, send_data_length, true);
-
-    //some circuit design corrections using software, since RMT does not care about the state of the IR pin, you have to install it manually
-    gpio_set_level(IR_PIN, 1);
 
     internal_led_off(LED_BLUE);
 

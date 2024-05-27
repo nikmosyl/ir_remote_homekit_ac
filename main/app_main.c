@@ -60,6 +60,7 @@ static const char *TAG = "HAP thermostat";
 #define RESET_GPIO  GPIO_NUM_0
 
 #define LED_ORANGE 18
+#define LED_BLUE 23
 /**
  * @brief The network reset button callback handler.
  * Useful for testing the Wi-Fi re-configuration feature of WAC2
@@ -134,6 +135,7 @@ static int thermostat_write(hap_write_data_t write_data[], int count,
 static void thermostat_thread_entry(void *arg)
 {
     internal_led_on(LED_ORANGE);
+    internal_led_off(LED_BLUE);
 
     hap_acc_t *accessory;
     hap_serv_t *service;
@@ -145,10 +147,10 @@ static void thermostat_thread_entry(void *arg)
      * the mandatory services internally
      */
     hap_acc_cfg_t cfg = {
-        .name = "Esp-AC",
+        .name = "Air conditioner",
         .manufacturer = "Espressif",
         .model = "EspAir01",
-        .serial_num = "202405211633",
+        .serial_num = "202405232123",
         .fw_rev = "1.0.0",
         .hw_rev = "1.0",
         .pv = "1.1.0",
@@ -212,7 +214,6 @@ static void thermostat_thread_entry(void *arg)
     hap_add_accessory(accessory);
 
     /* Initialize the RMT Hardware */
-    setup_rmt_config();
 
     /* Register a common button for reset Wi-Fi network and reset to factory.
      */
